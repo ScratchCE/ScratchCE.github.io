@@ -125,6 +125,9 @@
 			>
 		{/if}
 	</div>
+	<p class="disclaimer">
+		Disclaimer: Scratch Community Edition is not associated with or made by the Scratch Team or any of its affiliates.
+	</p>
 </main>
 
 <style>
@@ -199,6 +202,11 @@
 	}
 
 	input::placeholder {
+		font-style: italic;
+	}
+	
+	.disclaimer {
+		font-size: 75%;
 		font-style: italic;
 	}
 </style>
