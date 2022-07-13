@@ -26,7 +26,7 @@ jobs:
         uses: actions/upload-artifact@v2
         with:
           name: built-site
-          path: public/
+          path: dist/
       
       - name: Checkout to build
         uses: actions/checkout@v2
