@@ -14,7 +14,7 @@ Requirements:
 To clone and run a development server on your machine (that autoupdates when you modify files):
 
 ```
-git clone https://github.com/scratchce/scratchce.github.io
+git clone https://github.com/scratchce/scratchce.github.io.git
 cd scratchce.github.io
 npm install
 npm run dev
