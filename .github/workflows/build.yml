@@ -33,10 +33,14 @@ jobs:
         with:
           ref: 'build'
       
+      - name: Clear out folder
+        run: rm -rf ./dist/*
+      
       - name: Download artifact
         uses: actions/download-artifact@v2
         with:
           name: built-site
+          path: dist/
       
       - name: Commit and push
         uses: EndBug/add-and-commit@v8
