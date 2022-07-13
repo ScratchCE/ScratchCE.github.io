@@ -1,6 +1,6 @@
 <script>
 	import {createEventDispatcher, onMount} from "svelte";
-
+	
 	// Stuff that can be set
 	export let id = 0;
 	export let editor = false;
@@ -234,7 +234,7 @@
 				searchParamsString = searchParamsString === "" ? "" : "?" + searchParamsString;
 
 				frame.src =
-					"/src/lib/gui/" +
+					"/public/gui/" + 
 					(editor ? "editor.html" : "index.html")
 					+ searchParamsString + "#" + id;
 			}
