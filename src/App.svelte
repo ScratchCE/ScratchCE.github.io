@@ -15,6 +15,8 @@
 	async function hashStuff() {
 		if (location.hash === "#create") {
 			createProject();
+		} else if (location.hash === "#random") {
+			randomProject();
 		} else {
 			projectId = Number(location.hash.substring(1)) || 0;
 		}
@@ -41,6 +43,22 @@
 		// Eventually
 		// setProjTitle(atob(parsed["content-title"]));
 		return parsed;
+	}
+	async function randomProject() {
+		const req = await fetch(serverUrl + "/projects/count");
+		if (!req.ok) {
+			projectStatus = "unavailable";
+			return;
+		}
+		const text = await (req.text());
+		if (!Number(text)) {
+			projectStatus = "unavailable";
+			return;
+		}
+		const number = Number(text);
+		const random = Math.floor(Math.random() * number) + 1;
+		
+		window.location.hash = "#" + random;
 	}
 </script>
 
@@ -123,6 +141,7 @@
 					projectId = id;
 				}}
 			>
+			<button on:click={randomProject}>Random</button>
 		{/if}
 	</div>
 	<p class="disclaimer">
