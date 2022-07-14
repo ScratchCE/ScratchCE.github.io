@@ -7,6 +7,12 @@ jobs:
   build-site:
     runs-on: ubuntu-latest
     steps:
+      - name: Cache
+        uses: actions/cache@v3.0.5
+        with:
+          path: ./node-modules
+          key: dependencies
+      
       - uses: actions/setup-node@v2
         with:
           node-version: '14'
