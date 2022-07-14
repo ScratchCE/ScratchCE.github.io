@@ -1,11 +1,20 @@
 <script>
 	import ProjectPlayer from "./lib/ProjectPlayer.svelte";
-
+	
 	let projectTitle,
 		reduxStore,
 		projectStatus,
 		playerMode,
 		projectId = 0;
+
+	const urlParams = new URL(location.href).searchParams;
+	const hide = {
+		seeInside: urlParams.has("no-see-inside") || urlParams.has("no-controls"),
+		name: urlParams.has("no-name") || urlParams.has("no-controls"),
+		create: urlParams.has("no-create") || urlParams.has("no-controls"),
+		id: urlParams.has("no-id") || urlParams.has("no-nav"),
+		random: urlParams.has("no-random") || urlParams.has("no-nav"),
+	}
 	
 	const serverUrl = "https://5.187.229.143:443";
 	const defaultProject =
@@ -65,7 +74,11 @@
 <main>
 	<div class="anarchy-player">
 		{#if projectStatus === "notloaded"}
-			<p>Load a project ID!</p>
+			{#if hide.id}
+				<p>No project loaded.</p>
+			{:else}
+				<p>Load a project ID!</p>
+			{/if}
 		{:else if projectStatus === "creating"}
 			<p>Creating project...</p>
 		{:else if projectStatus === "invalidid"}
@@ -81,26 +94,32 @@
 		{:else if projectStatus === "ok"}
 			<div class="controls-container">
 				<div class="controls">
-					<button
-						on:click={() => {
-							location.hash = "#create";
-						}}
-					>
-						Create
-					</button>
-					<input
-						class="title-input"
-						type="text"
-						bind:value={projectTitle}
-						placeholder="Project title here"
-					>
-					<button
-						on:click={() => {
-							playerMode = "editor";
-						}}
-					>
-						See inside
-					</button>
+					{#if (!hide.create)}
+						<button
+							on:click={() => {
+								location.hash = "#create";
+							}}
+						>
+							Create
+						</button>
+					{/if}
+					{#if (!hide.name)}
+						<input
+							class="title-input"
+							type="text"
+							bind:value={projectTitle}
+							placeholder="Project title here"
+						>
+					{/if}
+					{#if (!hide.seeInside)}
+						<button
+							on:click={() => {
+								playerMode = "editor";
+							}}
+						>
+							See inside
+						</button>
+					{/if}
 				</div>
 			</div>
 		{/if}
@@ -120,28 +139,32 @@
 			projectStatus === "loading" ||
 			projectStatus === "creating"
 		)}
-			<input
-				class="id-input"
-				type="number"
-				placeholder="123"
-				value={projectId || ""}
-				on:keypress={e => {
-					const allow = e.metaKey ||
-						e.key.length !== 1 ||
-						/[+e0-9-]/.test(e.key);
-					if (!allow) e.preventDefault();
-					return allow;
-				}}
-				on:change={e => {
-					// @ts-ignore
-					const id = Number(e.target.value);
-					if (!id && id !== 0) return;
+			{#if (!hide.id)}
+				<input
+					class="id-input"
+					type="number"
+					placeholder="123"
+					value={projectId || ""}
+					on:keypress={e => {
+						const allow = e.metaKey ||
+							e.key.length !== 1 ||
+							/[+e0-9-]/.test(e.key);
+						if (!allow) e.preventDefault();
+						return allow;
+					}}
+					on:change={e => {
+						// @ts-ignore
+						const id = Number(e.target.value);
+						if (!id && id !== 0) return;
 
-					window.location.hash = "#" + id;
-					projectId = id;
-				}}
-			>
-			<button on:click={randomProject}>Random</button>
+						window.location.hash = "#" + id;
+						projectId = id;
+					}}
+				>
+			{/if}
+			{#if (!hide.random)}
+				<button on:click={randomProject}>Random</button>
+			{/if}
 		{/if}
 	</div>
 	<p class="disclaimer">
@@ -205,6 +228,8 @@
 		outline: none;
 		margin: 3px;
 		min-width: 0;
+		padding-top: .20rem;
+		padding-bottom: .20rem;
 	}
 	.title-input {
 		font-size: 1.5rem;
