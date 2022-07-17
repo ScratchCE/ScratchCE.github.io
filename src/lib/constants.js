@@ -1,0 +1,1 @@
+export const serverUrl = "https://5.187.229.143:443";

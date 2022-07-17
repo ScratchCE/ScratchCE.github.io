@@ -1,18 +1,7 @@
 import App from "./App.svelte";
+import {navigate} from "svelte-navigator";
 
-const mtPoint = document.getElementById("app");
-function mt(component, options = {}) {
-	mtPoint.innerHTML = "";
-	let cmp = new component({
-		target: mtPoint,
-		...options
-	});
-
-	console.info(
-		"mounted", component.name.substring(6, component.name.length - 1) + ";",
-		"options:", options
-	);
-	return cmp;
-}
-
-export const app = mt(App);
+export const app = new App({
+	target: document.getElementById("app")
+});
+navigate(location.pathname, { replace: true });
