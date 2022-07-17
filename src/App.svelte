@@ -168,7 +168,7 @@
 		{/if}
 	</div>
 	<p class="disclaimer">
-		Disclaimer: Scratch Community Edition is not associated with or made by the Scratch Team or any of its affiliates.
+		Disclaimer: Scratch Community Edition is not associated or affiliated with the Scratch website or any of the organizations that maintain it.
 	</p>
 </main>
 
