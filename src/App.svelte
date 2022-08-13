@@ -1,256 +1,218 @@
 <script>
-	import ProjectPlayer from "./lib/ProjectPlayer.svelte";
-	
-	let projectTitle,
-		reduxStore,
-		projectStatus,
-		playerMode,
-		projectId = 0;
+	import {Router, Link, Route, navigate} from "svelte-navigator";
 
-	const urlParams = new URL(location.href).searchParams;
-	const hide = {
-		seeInside: urlParams.has("no-see-inside") || urlParams.has("no-controls"),
-		name: urlParams.has("no-name") || urlParams.has("no-controls"),
-		create: urlParams.has("no-create") || urlParams.has("no-controls"),
-		id: urlParams.has("no-id") || urlParams.has("no-nav"),
-		random: urlParams.has("no-random") || urlParams.has("no-nav"),
-	}
-	
-	const serverUrl = "https://5.187.229.143:443";
-	const defaultProject =
-`{"targets":[{"isStage":true,"name":"Stage","variables":{},"lists":{},"broadcasts":{},"blocks":{},"comments":{},"currentCostume":0,"costumes":[{"assetId":"14e46ec3e2ba471c2adfe8f119052307","name":"","bitmapResolution":1,"md5ext":"14e46ec3e2ba471c2adfe8f119052307.svg","dataFormat":"svg","rotationCenterX":0,"rotationCenterY":0}],"sounds":[],"volume":100,"layerOrder":0,"tempo":60,"videoTransparency":50,"videoState":"on","textToSpeechLanguage":null},{"isStage":false,"name":"Communicat","variables":{},"lists":{},"broadcasts":{},"blocks":{},"comments":{},"currentCostume":0,"costumes":[{"assetId":"b551df3ba49e6475928309214f51bd94","name":"Communicat-a","bitmapResolution":1,"md5ext":"b551df3ba49e6475928309214f51bd94.svg","dataFormat":"svg","rotationCenterX":48.20865451049096,"rotationCenterY":49.61842375318162},{"assetId":"b62c61a6c0384f71872990115d93eea8","name":"Communicat-b","bitmapResolution":1,"md5ext":"b62c61a6c0384f71872990115d93eea8.svg","dataFormat":"svg","rotationCenterX":46.1326061009419,"rotationCenterY":52.471372930065456},{"assetId":"814a2e4591c4eab9e832b88d16d3988d","name":"Communicat-c","bitmapResolution":1,"md5ext":"814a2e4591c4eab9e832b88d16d3988d.svg","dataFormat":"svg","rotationCenterX":55.23697676581517,"rotationCenterY":29.391930273437737},{"assetId":"78ed5bb0fefd8984546468e1a1ebb1b6","name":"Communicat-d","bitmapResolution":1,"md5ext":"78ed5bb0fefd8984546468e1a1ebb1b6.svg","dataFormat":"svg","rotationCenterX":48.44891835577772,"rotationCenterY":41.586213103483544}],"sounds":[{"assetId":"83c36d806dc92327b9e7049a565c6bff","name":"Meow","dataFormat":"wav","rate":48000,"sampleCount":40682,"md5ext":"83c36d806dc92327b9e7049a565c6bff.wav"}],"volume":100,"layerOrder":1,"visible":true,"x":0,"y":0,"size":100,"direction":90,"stretch":100,"draggable":false,"rotationStyle":"all around"}],"monitors":[],"extensions":[],"meta":{"semver":"3.0.0","vm":"0.2.0","agent":""}}`;
-	
-	window.addEventListener("hashchange", hashStuff);
-	async function hashStuff() {
-		if (location.hash === "#create") {
-			createProject();
-		} else if (location.hash === "#random") {
-			randomProject();
-		} else {
-			projectId = Number(location.hash.substring(1)) || 0;
-		}
-	}
-	hashStuff();
+	import Home from "./pages/Home.svelte";
+	import ProjectPage from "./pages/ProjectPage.svelte";
+	import LoggingIn from "./pages/LoggingIn.svelte";
 
-	async function createProject() {
-		projectStatus = "creating";
-		const resp = await fetch(`${serverUrl}/projects/`, {
-			method: "POST",
-			headers: {
-				"Content-Type": "application/json"
-			},
-			body: defaultProject
-		});
-		const body = await resp.text();
-		if (!resp.ok) {
-			projectStatus = "unavailable";
-			throw body;
-		}
-		
-		let parsed = JSON.parse(body);
-		window.location.hash = "#" + parsed["content-name"];
-		// Eventually
-		// setProjTitle(atob(parsed["content-title"]));
-		return parsed;
-	}
-	async function randomProject() {
-		const req = await fetch(serverUrl + "/projects/count");
-		if (!req.ok) {
-			projectStatus = "unavailable";
-			return;
-		}
-		const text = await (req.text());
-		if (!Number(text)) {
-			projectStatus = "unavailable";
-			return;
-		}
-		const number = Number(text);
-		const random = Math.floor(Math.random() * number) + 1;
-		
-		window.location.hash = "#" + random;
-	}
+	import logo from "./assets/logo.svg";
+	import {authPromise, logOut} from "./lib/auth.js";
+
+	// @ts-ignore
+	window._navigate = navigate;
 </script>
 
-<main>
-	<div class="anarchy-player">
-		{#if projectStatus === "notloaded"}
-			{#if hide.id}
-				<p>No project loaded.</p>
-			{:else}
-				<p>Load a project ID!</p>
-			{/if}
-		{:else if projectStatus === "creating"}
-			<p>Creating project...</p>
-		{:else if projectStatus === "invalidid"}
-			<p>Invalid project ID!</p>
-		{:else if projectStatus === "unavailable"}
-			<p>Couldn't reach servers. They are probably down or the browser is blocking the requests. Try visiting <a href={serverUrl}>{serverUrl}</a> in your browser and allowing the page to load.</p>
-		{:else if projectStatus === "noproject"}
-			<p>The project you tried to load doesn't exist.</p>
-		{:else if projectStatus === "projectunavailable"}
-			<p>Somehow, we couldn't reach the project API but the servers work. What?</p>
-		{:else if projectStatus === "loading"}
-			<p>Loading...</p>
-		{:else if projectStatus === "ok"}
-			<div class="controls-container">
-				<div class="controls">
-					{#if (!hide.create)}
-						<button
-							on:click={() => {
-								location.hash = "#create";
-							}}
-						>
-							Create
-						</button>
-					{/if}
-					{#if (!hide.name)}
-						<input
-							class="title-input"
-							type="text"
-							bind:value={projectTitle}
-							placeholder="Project title here"
-						>
-					{/if}
-					{#if (!hide.seeInside)}
-						<button
-							on:click={() => {
-								playerMode = "editor";
-							}}
-						>
-							See inside
-						</button>
-					{/if}
+<Router>
+	<div class="app">
+		<header class="header">
+			<div class="left">
+				<div class="header-item">
+					<Link to="/">
+						<img 
+							src={logo}
+							alt="Scratch CE Beta"
+							class="logo"
+						/>
+					</Link>
 				</div>
+				{#await $authPromise}
+					{" "}
+				{:then d}
+					{#if d.user}
+						<span class="header-item">
+							<Link to="/projects/create/editor">Create</Link>
+						</span>
+					{/if}
+				{/await}
 			</div>
-		{/if}
-
-		<div class="player">
-			<ProjectPlayer 
-				bind:id={projectId}
-				bind:reduxStore
-				bind:projectTitle
-				bind:projectStatus
-				bind:playerMode
-				{serverUrl}
-			/>
-		</div>
-
-		{#if !(
-			projectStatus === "loading" ||
-			projectStatus === "creating"
-		)}
-			{#if (!hide.id)}
-				<input
-					class="id-input"
-					type="number"
-					placeholder="123"
-					value={projectId || ""}
-					on:keypress={e => {
-						const allow = e.metaKey ||
-							e.key.length !== 1 ||
-							/[+e0-9-]/.test(e.key);
-						if (!allow) e.preventDefault();
-						return allow;
-					}}
-					on:change={e => {
-						// @ts-ignore
-						const id = Number(e.target.value);
-						if (!id && id !== 0) return;
-
-						window.location.hash = "#" + id;
-						projectId = id;
-					}}
-				>
-			{/if}
-			{#if (!hide.random)}
-				<button on:click={randomProject}>Random</button>
-			{/if}
-		{/if}
+			<div class="right">
+				{#await $authPromise}
+					<span class="header-item">...</span>
+				{:then d}
+					{#if d.user}
+						<button
+							href=".#"
+							on:click|preventDefault={logOut}
+							class="header-item"
+						>
+							Sign out
+						</button>
+						<span class="header-item">
+							{d.user.username}
+							<img
+								class="header-pfp"
+								src="//uploads.scratch.mit.edu/get_image/user/{
+									Number(d.user.scratchId)
+								}_48x48.png"
+								alt=""
+							/>
+						</span>
+					{:else}
+						<a
+							class="header-item"
+							href="https://auth.itinerary.eu.org/auth?redirect={
+								window.btoa(`${location.origin}/auth`)
+							}"
+						>
+							Log in
+						</a>
+					{/if}
+				{:catch}
+					<span class="header-item">Error logging in.</span>
+				{/await}
+			</div>
+		</header>
+		<main class="content">
+			<Route path="/">
+				<Home />
+			</Route>
+			<Route path="projects/*wc" let:params>
+				<ProjectPage wc={params.wc}/>
+			</Route>
+			<Route path="auth">
+				<LoggingIn />
+			</Route>
+			<Route>
+				<p>
+					We couldn't find the page you were looking for.
+					<Link to="/">Here's a link to a page that does exist!</Link>
+				</p>
+			</Route>
+		</main>
+		<footer class="footer">
+			<p class="footer-paragraph">
+				Scratch Community Edition is a Scratch mod made by and for the community of Scratch. JBMC (<a href="https://scratch.mit.edu/users/JoshsAccount">@JoshsAccount</a> on Scratch) started the project, the main coder is <a href="https://github.com/CST1229">CST1229</a> and the main source of ideas is the <a href="https://discord.gg/ARY8zJJ8hQ">Discord server</a>.
+			</p>
+			<p class="footer-links">
+				<a href="https://github.com/ScratchCE">
+					Source code
+				</a>
+				|
+				<a href="https://discord.gg/ARY8zJJ8hQ">
+					Discord server
+				</a>
+				|
+				<a href="https://scratch.mit.edu/studios/31575642">
+					Scratch studio
+				</a>
+			</p>
+			<div class="footer-notes">
+				<p>
+					Scratch Community Edition is not associated or affiliated with the Scratch website or any of the organizations that maintain it.
+					<br />
+					By the communities, for the communities. 
+				</p>
+			</div>
+		</footer>
 	</div>
-	<p class="disclaimer">
-		Disclaimer: Scratch Community Edition is not associated or affiliated with the Scratch website or any of the organizations that maintain it.
-	</p>
-</main>
+</Router>
 
 <style>
-	:root {
-		font-family: "Helvetica Neue", Helvetica, Arial, sans-serif;
-		color: #575e75;
+	.content, .footer {
+		padding: 1em;
+		box-sizing: border-box;
 	}
 
-	main {
-		text-align: center;
+	.content {
+		min-height: calc(100vh - 13rem);
 	}
 
-	.controls-container {
-		display: flex;
-		justify-content: center;
-	}
-	.controls {
-		display: flex;
-	}
-	.controls * {
-		margin: 3px;
-	}
-
-	input, button {
-		font-family: inherit;
-		color: inherit;
-	}
-
-	button {
-		border-radius: .25rem;
-		padding-top: .6875rem;
-		padding-right: .9375rem;
-		padding-bottom: .6875rem;
-		padding-left: .875rem;
-		font-size: .875rem;
-
-		border: none;
-		font-weight: bold;
+	.header {
 		background-color: #2c6d31;
 		color: white;
+		height: 3rem;
+		padding: 0;
+		margin-bottom: 1rem;
+
+		position: sticky;
+		top: 0;
+
+		font-weight: bold;
+
+		display: flex;
+		align-items: center;
+	}
+	.header .left {
+		display: flex;
+		flex-grow: 1;
+		flex-shrink: 1;
+		align-items: center;
+		justify-content: left;
+		height: 100%;
+	}
+	.header .right {
+		display: flex;
+		align-items: center;
+		justify-content: right;
+		height: 100%;
+	}
+	.header img {
+		height: 2.25rem;
+	}
+
+	.header-item {
 		cursor: pointer;
+		padding: 0 0.75rem;
+		margin: 0 0.25rem;
+		height: 100%;
+		display: flex;
+		align-items: center;
+	}
+	.header-item:hover {
+		background-color: #0f551b;
 	}
 
-	input {
-		box-sizing: border-box;
-		
-		transition: all .5s ease;
-		border: 2px dashed #2c6d3140;
 
-		border-radius: 8px;
-		background-color: transparent;
-		padding: 0 1rem;
 
-		font-size: 1.25rem;
-
-		outline: none;
-		margin: 3px;
-		min-width: 0;
-		padding-top: .20rem;
-		padding-bottom: .20rem;
+	:global(button).header-item, :global(a).header-item, .header-item :global(a) {
+		appearance: none;
+		background: none;
+		border: none;
+		color: inherit;
+		font: inherit;
 	}
-	.title-input {
-		font-size: 1.5rem;
-	}
-	.id-input {
-		padding-top: 0.25rem;
-		padding-bottom: 0.25rem;
-	}
-	input:focus {
-		box-shadow: 0 0 0 4px #2c6d3140;
-		border-color: #2c6d31;
-		outline: none;
-		border-style: solid;
+	.header-pfp {
+		margin-left: 0.5rem;
 	}
 
-	input::placeholder {
-		font-style: italic;
+	.footer {
+		background-color: #2c6d31;
+		color: white;
+		margin-top: 1em;
+		margin-bottom: -1rem;
+
+		text-align: center;
+	}
+	.footer-paragraph {
+		padding: 0 5em;
+	}
+	.footer a {
+		color: white;
+	}
+	.footer a:hover {
+		color: #f6ab3c;
+	}
+	.footer-links a {
+		margin: 0 0.25em;
 	}
 	
-	.disclaimer {
+	.footer-notes {
 		font-size: 75%;
-		font-style: italic;
+
+		margin: -1rem;
+		margin-top: 0;
+		padding: 0.25rem;
+
+		background: black;
 	}
 </style>

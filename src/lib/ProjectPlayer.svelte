@@ -2,7 +2,7 @@
 	import {createEventDispatcher, onMount} from "svelte";
 
 
-	// Stuff that can be set
+	// Stuff that can be set initially and read anytime
 	export let id = 0;
 	export let editor = false;
 	export let params = {};
@@ -47,6 +47,7 @@
 		guiWindow = frame.contentWindow;
 
 		frame.addEventListener("load", async () => {
+			guiWindow = frame.contentWindow;
 			const doReduxStuff = async function() {
 				reduxTarget = guiWindow.ReduxTarget;
 				reduxStore = guiWindow.ReduxStore;
@@ -68,17 +69,14 @@
 						)
 					}
 				}
-				if (state.mode) {
-					setPlayerMode(state.mode);
-				}
+				setPlayerMode(playerMode);
 				if (state.projectTitle) {
 					projectTitle = state.projectTitle;
 				}
 
 				target.addEventListener("statechanged", (/** @type CustomEvent */ e) => {
 					const action = e.detail.action;
-					dispatch("reduxevent", e.detail);
-					console.log(e.detail);
+					dispatch("beforereduxevent", e.detail);
 					
 					switch (action.type) {
 						case "tw/custom-stage-size/SET":
@@ -89,14 +87,16 @@
 						break;
 						case "scratch-gui/mode/SET_FULL_SCREEN":
 						case "scratch-gui/mode/SET_PLAYER":
-							setPlayerMode(e.detail.next.scratchGui.mode);
+							setPlayerModeObj(e.detail.next.scratchGui.mode);
 						break;
 						case "projectTitle/SET_PROJECT_TITLE":
-							noReactEvents = true;
 							projectTitle = action.title;
 						break;
 					}
+
+					dispatch("reduxevent", e.detail);
 				});
+				dispatch("reduxtargetadded");
 			};
 
 			guiWindow.addEventListener("reduxtargetadded", doReduxStuff);
@@ -104,16 +104,18 @@
 		});
 	});
 
-	$: setPlayerModeString(playerMode);
-	$: setProjTitle(projectTitle);
-	$: setProject(id);
 	async function setProject(_id) {
+		console.log("set");
 		if (noReactEvents) {
 			noReactEvents = false;
 			return;
 		};
+		console.log("passed nre");
 		if (!guiWindow) return;
-		await shouldLoadGui(_id)
+		console.log("should");
+		await shouldLoadGui(_id);
+		console.log("passed");
+		id = _id;
 		guiWindow.location.hash = "#" + id;
 	}
 	function setProjTitle(title) {
@@ -131,27 +133,29 @@
 	/**
 		@param {string} mode
 	*/
-	function setPlayerModeString(mode) {
+	function setPlayerMode(mode) {
 		if (noReactEvents) {
 			noReactEvents = false;
 			return;
 		};
 		if (!reduxStore) return;
-		reduxStore.dispatch({
-			type: "scratch-gui/mode/SET_PLAYER",
-			isPlayerOnly: mode === "player" || mode === "fullscreen" || mode === "fullscreen-editor"
-		});
-		reduxStore.dispatch({
-			type: "scratch-gui/mode/SET_FULL_SCREEN",
-			isFullScreen: mode === "fullscreen" || mode === "fullscreen-editor"
-		});
+		setTimeout(() => {
+			reduxStore.dispatch({
+				type: "scratch-gui/mode/SET_PLAYER",
+				isPlayerOnly: mode === "player" || mode === "fullscreen" || mode === "fullscreen-editor"
+			});
+			reduxStore.dispatch({
+				type: "scratch-gui/mode/SET_FULL_SCREEN",
+				isFullScreen: mode === "fullscreen" || mode === "fullscreen-editor"
+			});
+		}, 0);
+		console.log(mode);
 	}
 
 	/**
 		@param {object} mode
 	*/
-	function setPlayerMode(mode) {
-		noReactEvents = true;
+	function setPlayerModeObj(mode) {
 		playerMode = mode ?
 			(
 				mode.isPlayerOnly ?
@@ -175,14 +179,22 @@
 			return false;
 		} else {
 			try {
-				const existRes = await fetch(`${projectHost}/${_id}/exists`);
-				if (existRes.ok) {
+				const res = await fetch(`${serverUrl}/api/projects/${id}/`, {
+					headers: {
+						"X-Token": localStorage.getItem("accounttoken") || undefined
+					}
+				});
+				if (res.ok) {
 					projectStatus = "ok";
 					setGuiUrl(true);
 					if (guiWindow) guiWindow.location.hash = "#" + _id;
 					return true;
 				} else {
-					projectStatus = "noproject";
+					if (res.status === 403) {
+						projectStatus = "unshared";
+					} else {
+						projectStatus = "noproject";
+					}
 					setGuiUrl(false);
 					return false;
 				}
@@ -244,6 +256,13 @@
 			frame.src = "about:blank";
 		}
 	}
+
+	export const functions = {
+		setProjTitle,
+		setProject,
+		setPlayerMode,
+		setPlayerModeObj,
+	}
 </script>
 
 <div>
@@ -275,6 +294,7 @@
 		position: fixed;
 		top: 0;
 		left: 0;
+		z-index: 100000000000;
 
 		width: 100vw;
 		height: 100vh;
